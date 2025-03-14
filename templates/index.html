@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>To-Do List</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+      }
+      li {
+        margin-bottom: 10px;
+      }
+      button {
+        margin-left: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>To-Do List</h1>
+    <ul id="todoList"></ul>
+
+    <input type="text" id="todoTitle" placeholder="할 일 제목" />
+    <input type="text" id="todoDescription" placeholder="설명" />
+    <button onclick="addTodo()">Add To-Do</button>
+
+    <script>
+      async function fetchTodos() {
+        const response = await fetch("/todos");
+        const todos = await response.json();
+        const list = document.getElementById("todoList");
+        list.innerHTML = "";
+        todos.forEach((todo) => {
+          const li = document.createElement("li");
+
+          // 완료 여부 체크박스
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = todo.completed;
+          checkbox.onchange = () => toggleCompleted(todo.id, checkbox.checked);
+
+          // 할 일 제목 및 설명 표시
+          const span = document.createElement("span");
+          span.textContent = `${todo.title}: ${todo.description} (Completed: ${todo.completed})`;
+
+          // 수정 버튼
+          const editButton = document.createElement("button");
+          editButton.textContent = "Edit";
+          editButton.onclick = () =>
+            editTodo(todo.id, todo.title, todo.description);
+
+          // 삭제 버튼
+          const deleteButton = document.createElement("button");
+          deleteButton.textContent = "Delete";
+          deleteButton.onclick = () => deleteTodo(todo.id);
+
+          li.appendChild(checkbox);
+          li.appendChild(span);
+          li.appendChild(editButton);
+          li.appendChild(deleteButton);
+          list.appendChild(li);
+        });
+      }
+
+      async function addTodo() {
+        const titleInput = document.getElementById("todoTitle");
+        const descriptionInput = document.getElementById("todoDescription");
+
+        const title = titleInput.value;
+        const description = descriptionInput.value;
+
+        if (!title.trim()) {
+          alert("제목을 입력하세요!");
+          return;
+        }
+
+        await fetch("/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, description, completed: false }),
+        });
+
+        // 입력 필드 초기화
+        titleInput.value = "";
+        descriptionInput.value = "";
+
+        fetchTodos();
+      }
+
+      async function editTodo(id, currentTitle, currentDescription) {
+        const newTitle = prompt(
+          "새 제목을 입력하세요 (그대로 두려면 취소)",
+          currentTitle
+        );
+        const newDescription = prompt(
+          "새 설명을 입력하세요 (그대로 두려면 취소)",
+          currentDescription
+        );
+
+        // 서버로 보낼 데이터 객체 초기화
+        const updatedData = {};
+
+        // 사용자가 입력한 값만 업데이트되도록 처리
+        if (newTitle !== null && newTitle.trim() !== "") {
+          updatedData.title = newTitle;
+        }
+        if (newDescription !== null && newDescription.trim() !== "") {
+          updatedData.description = newDescription;
+        }
+
+        // 변경 사항이 있을 경우에만 API 호출
+        if (Object.keys(updatedData).length > 0) {
+          await fetch(`/todos/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updatedData),
+          });
+          fetchTodos();
+        }
+      }
+
+      async function deleteTodo(id) {
+        await fetch(`/todos/${id}`, { method: "DELETE" });
+        fetchTodos();
+      }
+
+      async function toggleCompleted(id, completed) {
+        await fetch(`/todos/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ completed }),
+        });
+        fetchTodos();
+      }
+
+      fetchTodos();
+    </script>
+  </body>
+</html>
