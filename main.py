@@ -35,11 +35,13 @@ class TodoItem(BaseModel):
     title: str
     description: str
     completed: bool = False
+    tags: list[str] = []
 
 class TodoUpdate(BaseModel):
     title: str = None
     description: str = None
     completed: bool = None
+    tags: list[str] = None
 
 # 기본 페이지 제공 (프론트엔드 렌더링)
 @app.get("/", response_class=HTMLResponse)
@@ -73,9 +75,12 @@ def update_todo(todo_id: int, updated_todo: TodoUpdate):
                 todo["description"] = updated_todo.description
             if updated_todo.completed is not None:
                 todo["completed"] = updated_todo.completed
+            if updated_todo.tags is not None:  # 👈 이 부분 추가
+                todo["tags"] = updated_todo.tags
             save_data(todos)
             return todo
     raise HTTPException(status_code=404, detail="Todo not found")
+
 
 # 특정 할 일 삭제
 @app.delete("/todos/{todo_id}")

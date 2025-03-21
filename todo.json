@@ -3,6 +3,22 @@
         "id": 1,
         "title": "20191610",
         "description": "유시원",
-        "completed": false
+        "completed": false,
+        "tags": [
+            "서강대",
+            "컴퓨터공학과",
+            "19학번"
+        ]
+    },
+    {
+        "id": 2,
+        "title": "오픈소스 과제 하기",
+        "description": "다음 주 목요일까지 Jenkins 과제 완료하기",
+        "completed": true,
+        "tags": [
+            "학교",
+            "과제",
+            "오픈소스"
+        ]
     }
 ]

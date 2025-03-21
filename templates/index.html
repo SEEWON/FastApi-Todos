@@ -4,30 +4,51 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>To-Do List</title>
+
+    <!-- Bootstrap CSS CDN -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
     <style>
       body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-      }
-      ul {
-        list-style: none;
-        padding: 0;
-      }
-      li {
-        margin-bottom: 10px;
-      }
-      button {
-        margin-left: 5px;
+        padding: 20px;
       }
     </style>
   </head>
-  <body>
-    <h1>To-Do List</h1>
-    <ul id="todoList"></ul>
 
-    <input type="text" id="todoTitle" placeholder="할 일 제목" />
-    <input type="text" id="todoDescription" placeholder="설명" />
-    <button onclick="addTodo()">Add To-Do</button>
+  <body>
+    <div class="container">
+      <h1 class="my-4">📝 To-Do List</h1>
+
+      <div class="input-group mb-3">
+        <input
+          type="text"
+          id="todoTitle"
+          class="form-control"
+          placeholder="할 일 제목"
+        />
+        <input
+          type="text"
+          id="todoDescription"
+          class="form-control"
+          placeholder="설명"
+        />
+        <input
+          type="text"
+          id="todoTags"
+          class="form-control"
+          placeholder="태그 (콤마로 구분)"
+        />
+        <button class="btn btn-primary" onclick="addTodo()">추가하기</button>
+      </div>
+
+      <ul id="todoList" class="list-group"></ul>
+    </div>
+
+    <!-- Bootstrap JS Bundle CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
       async function fetchTodos() {
@@ -35,34 +56,53 @@
         const todos = await response.json();
         const list = document.getElementById("todoList");
         list.innerHTML = "";
+
         todos.forEach((todo) => {
           const li = document.createElement("li");
+          li.className =
+            "list-group-item d-flex justify-content-between align-items-center";
 
-          // 완료 여부 체크박스
           const checkbox = document.createElement("input");
           checkbox.type = "checkbox";
           checkbox.checked = todo.completed;
+          checkbox.className = "form-check-input me-2";
           checkbox.onchange = () => toggleCompleted(todo.id, checkbox.checked);
 
-          // 할 일 제목 및 설명 표시
-          const span = document.createElement("span");
-          span.textContent = `${todo.title}: ${todo.description} (Completed: ${todo.completed})`;
+          const todoText = document.createElement("div");
+          todoText.className = "flex-grow-1";
+          todoText.innerHTML = `
+      <strong>${todo.title}</strong>: ${todo.description}
+      <div>${todo.tags
+        .map((tag) => `<span class="badge bg-secondary me-1">${tag}</span>`)
+        .join("")}</div>
+    `;
 
-          // 수정 버튼
+          if (todo.completed) {
+            todoText.style.textDecoration = "line-through";
+            todoText.classList.add("text-muted");
+          }
+
+          const btnGroup = document.createElement("div");
+          btnGroup.className = "btn-group btn-group-sm";
+
           const editButton = document.createElement("button");
-          editButton.textContent = "Edit";
+          editButton.className = "btn btn-outline-secondary";
+          editButton.textContent = "수정";
           editButton.onclick = () =>
-            editTodo(todo.id, todo.title, todo.description);
+            editTodo(todo.id, todo.title, todo.description, todo.tags || []);
 
-          // 삭제 버튼
           const deleteButton = document.createElement("button");
-          deleteButton.textContent = "Delete";
+          deleteButton.className = "btn btn-outline-danger";
+          deleteButton.textContent = "삭제";
           deleteButton.onclick = () => deleteTodo(todo.id);
 
+          btnGroup.appendChild(editButton);
+          btnGroup.appendChild(deleteButton);
+
           li.appendChild(checkbox);
-          li.appendChild(span);
-          li.appendChild(editButton);
-          li.appendChild(deleteButton);
+          li.appendChild(todoText);
+          li.appendChild(btnGroup);
+
           list.appendChild(li);
         });
       }
@@ -70,11 +110,16 @@
       async function addTodo() {
         const titleInput = document.getElementById("todoTitle");
         const descriptionInput = document.getElementById("todoDescription");
+        const tagsInput = document.getElementById("todoTags");
 
-        const title = titleInput.value;
-        const description = descriptionInput.value;
+        const title = titleInput.value.trim();
+        const description = descriptionInput.value.trim();
+        const tags = tagsInput.value
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag);
 
-        if (!title.trim()) {
+        if (!title) {
           alert("제목을 입력하세요!");
           return;
         }
@@ -82,17 +127,22 @@
         await fetch("/todos", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, description, completed: false }),
+          body: JSON.stringify({ title, description, completed: false, tags }),
         });
 
-        // 입력 필드 초기화
         titleInput.value = "";
         descriptionInput.value = "";
+        tagsInput.value = "";
 
         fetchTodos();
       }
 
-      async function editTodo(id, currentTitle, currentDescription) {
+      async function editTodo(
+        id,
+        currentTitle,
+        currentDescription,
+        currentTags
+      ) {
         const newTitle = prompt(
           "새 제목을 입력하세요 (그대로 두려면 취소)",
           currentTitle
@@ -101,19 +151,28 @@
           "새 설명을 입력하세요 (그대로 두려면 취소)",
           currentDescription
         );
+        const newTagsInput = prompt(
+          "태그를 수정하세요 (콤마로 구분, 그대로 두려면 취소)",
+          currentTags.join(", ")
+        );
 
-        // 서버로 보낼 데이터 객체 초기화
         const updatedData = {};
 
-        // 사용자가 입력한 값만 업데이트되도록 처리
         if (newTitle !== null && newTitle.trim() !== "") {
-          updatedData.title = newTitle;
-        }
-        if (newDescription !== null && newDescription.trim() !== "") {
-          updatedData.description = newDescription;
+          updatedData.title = newTitle.trim();
         }
 
-        // 변경 사항이 있을 경우에만 API 호출
+        if (newDescription !== null && newDescription.trim() !== "") {
+          updatedData.description = newDescription.trim();
+        }
+
+        if (newTagsInput !== null) {
+          updatedData.tags = newTagsInput
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter((tag) => tag);
+        }
+
         if (Object.keys(updatedData).length > 0) {
           await fetch(`/todos/${id}`, {
             method: "PUT",
