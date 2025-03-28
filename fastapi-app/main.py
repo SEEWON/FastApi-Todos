@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
+from fastapi import Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -89,3 +90,16 @@ def delete_todo(todo_id: int):
     todos = [todo for todo in todos if todo["id"] != todo_id]
     save_data(todos)
     return {"message": "Todo deleted successfully"}
+
+@app.get("/todos/search")
+def search_todos(q: str = Query(..., min_length=1)):
+    todos = load_data()
+    lower_q = q.lower()
+
+    filtered = [
+        todo for todo in todos
+        if lower_q in todo["title"].lower()
+        or lower_q in todo["description"].lower()
+        or any(lower_q in tag.lower() for tag in todo["tags"])
+    ]
+    return filtered
