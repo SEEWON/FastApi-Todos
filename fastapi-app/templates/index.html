@@ -15,13 +15,45 @@
       body {
         padding: 20px;
       }
+      canvas#todoChart {
+        max-width: 600px;
+        height: 300px !important; /* 👈 이거 추가해보세요 */
+        margin: auto;
+        display: block;
+      }
+
+      #chartsContainer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 40px;
+        align-items: flex-start;
+      }
+
+      #chartsContainer canvas {
+        flex: 1 1 300px;
+        max-width: 400px;
+        max-height: 300px;
+      }
     </style>
   </head>
 
   <body>
     <div class="container">
-      <h1 class="my-4">📝 To-Do List</h1>
+      <h1 class="my-4">📝 Sean's To-Do List</h1>
 
+      <h3>📊 Charts</h3>
+
+      <div
+        class="d-flex flex-wrap justify-content-center gap-4 my-4"
+        id="chartsContainer"
+      >
+        <canvas id="todoChart"></canvas>
+        <canvas id="tagChart"></canvas>
+      </div>
+
+      <h3>☑️ To-Dos</h3>
+      <!-- 검색 -->
       <div class="input-group mb-3">
         <input
           type="text"
@@ -37,6 +69,7 @@
         </button>
       </div>
 
+      <!-- 추가 -->
       <div class="input-group mb-3">
         <input
           type="text"
@@ -62,10 +95,95 @@
       <ul id="todoList" class="list-group"></ul>
     </div>
 
-    <!-- Bootstrap JS Bundle CDN -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
+      function updateChart(todos) {
+        const completed = todos.filter((t) => t.completed).length;
+        const notCompleted = todos.length - completed;
+
+        const canvas = document.getElementById("todoChart");
+        const ctx = canvas.getContext("2d");
+
+        // 🔐 안전하게 파괴
+        if (
+          window.todoChart &&
+          typeof window.todoChart.destroy === "function"
+        ) {
+          window.todoChart.destroy();
+        }
+
+        window.todoChart = new Chart(ctx, {
+          type: "pie",
+          data: {
+            labels: ["완료", "미완료"],
+            datasets: [
+              {
+                data: [completed, notCompleted],
+                backgroundColor: ["#4caf50", "#f44336"],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: "bottom",
+              },
+            },
+          },
+        });
+      }
+
+      function updateTagChart(todos) {
+        const tagCounts = {};
+
+        todos.forEach((todo) => {
+          (todo.tags || []).forEach((tag) => {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+          });
+        });
+
+        const labels = Object.keys(tagCounts);
+        const data = Object.values(tagCounts);
+
+        const ctx = document.getElementById("tagChart").getContext("2d");
+
+        if (window.tagChart && typeof window.tagChart.destroy === "function") {
+          window.tagChart.destroy();
+        }
+
+        window.tagChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "태그별 할 일 수",
+                data: data,
+                backgroundColor: "#36a2eb",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            aspectRatio: 1.2,
+            plugins: {
+              legend: { display: false },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 },
+              },
+            },
+          },
+        });
+      }
+
       function renderTodos(todos) {
         const list = document.getElementById("todoList");
         list.innerHTML = "";
@@ -84,11 +202,13 @@
           const todoText = document.createElement("div");
           todoText.className = "flex-grow-1";
           todoText.innerHTML = `
-      <strong>${todo.title}</strong>: ${todo.description}
-      <div>${todo.tags
-        .map((tag) => `<span class="badge bg-secondary me-1">${tag}</span>`)
-        .join("")}</div>
-    `;
+            <strong>${todo.title}</strong>: ${todo.description}
+            <div>${todo.tags
+              .map(
+                (tag) => `<span class="badge bg-secondary me-1">${tag}</span>`
+              )
+              .join("")}</div>
+          `;
 
           if (todo.completed) {
             todoText.style.textDecoration = "line-through";
@@ -118,6 +238,9 @@
 
           list.appendChild(li);
         });
+
+        updateChart(todos);
+        updateTagChart(todos);
       }
 
       async function fetchTodos() {
@@ -127,14 +250,13 @@
       }
 
       async function addTodo() {
-        const titleInput = document.getElementById("todoTitle");
-        const descriptionInput = document.getElementById("todoDescription");
-        const tagsInput = document.getElementById("todoTags");
-
-        const title = titleInput.value.trim();
-        const description = descriptionInput.value.trim();
-        const tags = tagsInput.value
-          .split(",")
+        const title = document.getElementById("todoTitle").value.trim();
+        const description = document
+          .getElementById("todoDescription")
+          .value.trim();
+        const tags = document
+          .getElementById("todoTags")
+          .value.split(",")
           .map((tag) => tag.trim())
           .filter((tag) => tag);
 
@@ -149,9 +271,9 @@
           body: JSON.stringify({ title, description, completed: false, tags }),
         });
 
-        titleInput.value = "";
-        descriptionInput.value = "";
-        tagsInput.value = "";
+        document.getElementById("todoTitle").value = "";
+        document.getElementById("todoDescription").value = "";
+        document.getElementById("todoTags").value = "";
 
         fetchTodos();
       }
@@ -230,7 +352,9 @@
         renderTodos(todos);
       }
 
-      fetchTodos();
+      window.addEventListener("DOMContentLoaded", () => {
+        fetchTodos();
+      });
     </script>
   </body>
 </html>
