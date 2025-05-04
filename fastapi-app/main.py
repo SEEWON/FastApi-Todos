@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 from fastapi.templating import Jinja2Templates
+from typing import Optional
 
 app = FastAPI()
 
@@ -39,10 +40,11 @@ class TodoItem(BaseModel):
     tags: list[str] = []
 
 class TodoUpdate(BaseModel):
-    title: str = None
-    description: str = None
-    completed: bool = None
-    tags: list[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    completed: Optional[bool] = None
+    tags: Optional[list[str]] = None
+
 
 # 기본 페이지 제공 (프론트엔드 렌더링)
 @app.get("/", response_class=HTMLResponse)
