@@ -14,10 +14,45 @@
     <style>
       body {
         padding: 20px;
+        transition: background-color 0.3s, color 0.3s;
       }
+
+      body.dark-mode {
+        background-color: #212529;
+        color: #f8f9fa;
+      }
+
+      body.dark-mode .list-group-item {
+        background-color: #343a40;
+        border-color: #495057;
+        color: #f8f9fa;
+      }
+
+      body.dark-mode .form-control {
+        background-color: #343a40;
+        border-color: #495057;
+        color: #f8f9fa;
+      }
+
+      body.dark-mode .form-control:focus {
+        background-color: #343a40;
+        border-color: #495057;
+        color: #f8f9fa;
+      }
+
+      body.dark-mode .btn-outline-secondary {
+        color: #f8f9fa;
+        border-color: #6c757d;
+      }
+
+      body.dark-mode .btn-outline-secondary:hover {
+        background-color: #6c757d;
+        color: #f8f9fa;
+      }
+
       canvas#todoChart {
         max-width: 600px;
-        height: 300px !important; /* 👈 이거 추가해보세요 */
+        height: 300px !important;
         margin: auto;
         display: block;
       }
@@ -35,10 +70,24 @@
         max-width: 400px;
         max-height: 300px;
       }
+
+      .dark-mode-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+      }
     </style>
   </head>
 
   <body>
+    <button
+      class="btn btn-outline-secondary dark-mode-toggle"
+      onclick="toggleDarkMode()"
+    >
+      🌙 다크 모드
+    </button>
+
     <div class="container">
       <h1 class="my-4">📝 Sean's To-Do List</h1>
 
@@ -352,7 +401,28 @@
         renderTodos(todos);
       }
 
-      window.addEventListener("DOMContentLoaded", () => {
+      // 다크 모드 토글 함수
+      function toggleDarkMode() {
+        document.body.classList.toggle("dark-mode");
+        const isDarkMode = document.body.classList.contains("dark-mode");
+        localStorage.setItem("darkMode", isDarkMode);
+        updateDarkModeButton();
+      }
+
+      // 다크 모드 버튼 텍스트 업데이트
+      function updateDarkModeButton() {
+        const button = document.querySelector(".dark-mode-toggle");
+        const isDarkMode = document.body.classList.contains("dark-mode");
+        button.textContent = isDarkMode ? "☀️ 라이트 모드" : "🌙 다크 모드";
+      }
+
+      // 페이지 로드 시 다크 모드 상태 복원
+      document.addEventListener("DOMContentLoaded", () => {
+        const isDarkMode = localStorage.getItem("darkMode") === "true";
+        if (isDarkMode) {
+          document.body.classList.add("dark-mode");
+        }
+        updateDarkModeButton();
         fetchTodos();
       });
     </script>
