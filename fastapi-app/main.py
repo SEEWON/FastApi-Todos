@@ -8,8 +8,12 @@ import os
 from pathlib import Path
 from fastapi.templating import Jinja2Templates
 from typing import Optional
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI()
+
+# Prometheus 메트릭스 엔드포인트 (/metrics)
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 # 프로젝트 경로 설정
 BASE_DIR = Path(__file__).resolve().parent
