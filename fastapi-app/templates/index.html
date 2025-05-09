@@ -118,30 +118,135 @@
         </button>
       </div>
 
-      <!-- 추가 -->
-      <div class="input-group mb-3">
-        <input
-          type="text"
-          id="todoTitle"
-          class="form-control"
-          placeholder="할 일 제목"
-        />
-        <input
-          type="text"
-          id="todoDescription"
-          class="form-control"
-          placeholder="설명"
-        />
-        <input
-          type="text"
-          id="todoTags"
-          class="form-control"
-          placeholder="태그 (콤마로 구분)"
-        />
-        <button class="btn btn-primary" onclick="addTodo()">추가하기</button>
+      <!-- 추가 버튼 -->
+      <div class="mb-3">
+        <button class="btn btn-primary" onclick="openAddModal()">
+          새 할 일 추가
+        </button>
       </div>
 
       <ul id="todoList" class="list-group"></ul>
+    </div>
+
+    <!-- 할 일 추가 모달 -->
+    <div class="modal fade" id="addTodoModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">새 할 일 추가</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="addTodoForm">
+              <div class="mb-3">
+                <label for="modalTodoTitle" class="form-label">제목</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="modalTodoTitle"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="modalTodoDescription" class="form-label"
+                  >설명</label
+                >
+                <textarea
+                  class="form-control"
+                  id="modalTodoDescription"
+                  rows="3"
+                ></textarea>
+              </div>
+              <div class="mb-3">
+                <label for="modalTodoTags" class="form-label"
+                  >태그 (콤마로 구분)</label
+                >
+                <input type="text" class="form-control" id="modalTodoTags" />
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="submitAddTodo()"
+            >
+              추가
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 할 일 수정 모달 -->
+    <div class="modal fade" id="editTodoModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">할 일 수정</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="editTodoForm">
+              <input type="hidden" id="editTodoId" />
+              <div class="mb-3">
+                <label for="editTodoTitle" class="form-label">제목</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="editTodoTitle"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="editTodoDescription" class="form-label">설명</label>
+                <textarea
+                  class="form-control"
+                  id="editTodoDescription"
+                  rows="3"
+                ></textarea>
+              </div>
+              <div class="mb-3">
+                <label for="editTodoTags" class="form-label"
+                  >태그 (콤마로 구분)</label
+                >
+                <input type="text" class="form-control" id="editTodoTags" />
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="submitEditTodo()"
+            >
+              저장
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Bootstrap JS -->
@@ -150,6 +255,96 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
+      // 모달 인스턴스 생성
+      let addTodoModal;
+      let editTodoModal;
+
+      document.addEventListener("DOMContentLoaded", () => {
+        addTodoModal = new bootstrap.Modal(
+          document.getElementById("addTodoModal")
+        );
+        editTodoModal = new bootstrap.Modal(
+          document.getElementById("editTodoModal")
+        );
+
+        const isDarkMode = localStorage.getItem("darkMode") === "true";
+        if (isDarkMode) {
+          document.body.classList.add("dark-mode");
+        }
+        updateDarkModeButton();
+        fetchTodos();
+      });
+
+      // 모달 열기 함수들
+      function openAddModal() {
+        document.getElementById("modalTodoTitle").value = "";
+        document.getElementById("modalTodoDescription").value = "";
+        document.getElementById("modalTodoTags").value = "";
+        addTodoModal.show();
+      }
+
+      function openEditModal(id, title, description, tags) {
+        document.getElementById("editTodoId").value = id;
+        document.getElementById("editTodoTitle").value = title;
+        document.getElementById("editTodoDescription").value = description;
+        document.getElementById("editTodoTags").value = tags.join(", ");
+        editTodoModal.show();
+      }
+
+      // 모달 제출 함수들
+      async function submitAddTodo() {
+        const title = document.getElementById("modalTodoTitle").value.trim();
+        const description = document
+          .getElementById("modalTodoDescription")
+          .value.trim();
+        const tags = document
+          .getElementById("modalTodoTags")
+          .value.split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag);
+
+        if (!title) {
+          alert("제목을 입력하세요!");
+          return;
+        }
+
+        await fetch("/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, description, completed: false, tags }),
+        });
+
+        addTodoModal.hide();
+        fetchTodos();
+      }
+
+      async function submitEditTodo() {
+        const id = document.getElementById("editTodoId").value;
+        const title = document.getElementById("editTodoTitle").value.trim();
+        const description = document
+          .getElementById("editTodoDescription")
+          .value.trim();
+        const tags = document
+          .getElementById("editTodoTags")
+          .value.split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag);
+
+        if (!title) {
+          alert("제목을 입력하세요!");
+          return;
+        }
+
+        await fetch(`/todos/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, description, tags }),
+        });
+
+        editTodoModal.hide();
+        fetchTodos();
+      }
+
       function updateChart(todos) {
         const completed = todos.filter((t) => t.completed).length;
         const notCompleted = todos.length - completed;
@@ -271,7 +466,12 @@
           editButton.className = "btn btn-outline-secondary";
           editButton.textContent = "수정";
           editButton.onclick = () =>
-            editTodo(todo.id, todo.title, todo.description, todo.tags || []);
+            openEditModal(
+              todo.id,
+              todo.title,
+              todo.description,
+              todo.tags || []
+            );
 
           const deleteButton = document.createElement("button");
           deleteButton.className = "btn btn-outline-danger";
@@ -296,81 +496,6 @@
         const response = await fetch("/todos");
         const todos = await response.json();
         renderTodos(todos);
-      }
-
-      async function addTodo() {
-        const title = document.getElementById("todoTitle").value.trim();
-        const description = document
-          .getElementById("todoDescription")
-          .value.trim();
-        const tags = document
-          .getElementById("todoTags")
-          .value.split(",")
-          .map((tag) => tag.trim())
-          .filter((tag) => tag);
-
-        if (!title) {
-          alert("제목을 입력하세요!");
-          return;
-        }
-
-        await fetch("/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, description, completed: false, tags }),
-        });
-
-        document.getElementById("todoTitle").value = "";
-        document.getElementById("todoDescription").value = "";
-        document.getElementById("todoTags").value = "";
-
-        fetchTodos();
-      }
-
-      async function editTodo(
-        id,
-        currentTitle,
-        currentDescription,
-        currentTags
-      ) {
-        const newTitle = prompt(
-          "새 제목을 입력하세요 (그대로 두려면 취소)",
-          currentTitle
-        );
-        const newDescription = prompt(
-          "새 설명을 입력하세요 (그대로 두려면 취소)",
-          currentDescription
-        );
-        const newTagsInput = prompt(
-          "태그를 수정하세요 (콤마로 구분, 그대로 두려면 취소)",
-          currentTags.join(", ")
-        );
-
-        const updatedData = {};
-
-        if (newTitle !== null && newTitle.trim() !== "") {
-          updatedData.title = newTitle.trim();
-        }
-
-        if (newDescription !== null && newDescription.trim() !== "") {
-          updatedData.description = newDescription.trim();
-        }
-
-        if (newTagsInput !== null) {
-          updatedData.tags = newTagsInput
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter((tag) => tag);
-        }
-
-        if (Object.keys(updatedData).length > 0) {
-          await fetch(`/todos/${id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updatedData),
-          });
-          fetchTodos();
-        }
       }
 
       async function deleteTodo(id) {
@@ -415,16 +540,6 @@
         const isDarkMode = document.body.classList.contains("dark-mode");
         button.textContent = isDarkMode ? "☀️ 라이트 모드" : "🌙 다크 모드";
       }
-
-      // 페이지 로드 시 다크 모드 상태 복원
-      document.addEventListener("DOMContentLoaded", () => {
-        const isDarkMode = localStorage.getItem("darkMode") === "true";
-        if (isDarkMode) {
-          document.body.classList.add("dark-mode");
-        }
-        updateDarkModeButton();
-        fetchTodos();
-      });
     </script>
   </body>
 </html>
