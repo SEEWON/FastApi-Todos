@@ -59,16 +59,53 @@
 
       #chartsContainer {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
+        gap: 30px;
+        margin: 20px auto;
+        max-width: 800px;
+      }
+
+      #todoChart {
+        width: 100% !important;
+        height: 300px !important;
+      }
+
+      .bottom-charts {
+        display: flex;
+        gap: 20px;
+        width: 100%;
         justify-content: center;
-        gap: 40px;
-        align-items: flex-start;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .bottom-charts canvas {
+        flex: 0 1 350px;
+        height: 300px !important;
       }
 
       #chartsContainer canvas {
-        flex: 1 1 300px;
-        max-width: 400px;
-        max-height: 300px;
+        background-color: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      body.dark-mode #chartsContainer canvas {
+        background-color: #343a40;
+      }
+
+      @media (max-width: 768px) {
+        #chartsContainer {
+          padding: 0 10px;
+        }
+        .bottom-charts {
+          flex-direction: column;
+          align-items: center;
+        }
+        .bottom-charts canvas {
+          width: 100% !important;
+        }
       }
 
       .dark-mode-toggle {
@@ -90,16 +127,6 @@
 
     <div class="container">
       <h1 class="my-4">📝 Sean's To-Do List</h1>
-
-      <h3>📊 Charts</h3>
-
-      <div
-        class="d-flex flex-wrap justify-content-center gap-4 my-4"
-        id="chartsContainer"
-      >
-        <canvas id="todoChart"></canvas>
-        <canvas id="tagChart"></canvas>
-      </div>
 
       <h3>☑️ To-Dos</h3>
       <!-- 검색 -->
@@ -126,6 +153,20 @@
       </div>
 
       <ul id="todoList" class="list-group"></ul>
+
+      <hr class="my-5" />
+
+      <h3>📊 Charts</h3>
+      <div
+        class="d-flex flex-wrap justify-content-center gap-4 my-4"
+        id="chartsContainer"
+      >
+        <canvas id="todoChart"></canvas>
+        <div class="bottom-charts">
+          <canvas id="tagChart"></canvas>
+          <canvas id="priorityChart"></canvas>
+        </div>
+      </div>
     </div>
 
     <!-- 할 일 추가 모달 -->
@@ -166,6 +207,16 @@
                   >태그 (콤마로 구분)</label
                 >
                 <input type="text" class="form-control" id="modalTodoTags" />
+              </div>
+              <div class="mb-3">
+                <label for="modalTodoPriority" class="form-label"
+                  >우선순위</label
+                >
+                <select class="form-select" id="modalTodoPriority">
+                  <option value="높음">높음</option>
+                  <option value="중간" selected>중간</option>
+                  <option value="낮음">낮음</option>
+                </select>
               </div>
             </form>
           </div>
@@ -227,6 +278,16 @@
                 >
                 <input type="text" class="form-control" id="editTodoTags" />
               </div>
+              <div class="mb-3">
+                <label for="editTodoPriority" class="form-label"
+                  >우선순위</label
+                >
+                <select class="form-select" id="editTodoPriority">
+                  <option value="높음">높음</option>
+                  <option value="중간">중간</option>
+                  <option value="낮음">낮음</option>
+                </select>
+              </div>
             </form>
           </div>
           <div class="modal-footer">
@@ -280,14 +341,16 @@
         document.getElementById("modalTodoTitle").value = "";
         document.getElementById("modalTodoDescription").value = "";
         document.getElementById("modalTodoTags").value = "";
+        document.getElementById("modalTodoPriority").value = "중간";
         addTodoModal.show();
       }
 
-      function openEditModal(id, title, description, tags) {
+      function openEditModal(id, title, description, tags, priority) {
         document.getElementById("editTodoId").value = id;
         document.getElementById("editTodoTitle").value = title;
         document.getElementById("editTodoDescription").value = description;
         document.getElementById("editTodoTags").value = tags.join(", ");
+        document.getElementById("editTodoPriority").value = priority;
         editTodoModal.show();
       }
 
@@ -302,6 +365,7 @@
           .value.split(",")
           .map((tag) => tag.trim())
           .filter((tag) => tag);
+        const priority = document.getElementById("modalTodoPriority").value;
 
         if (!title) {
           alert("제목을 입력하세요!");
@@ -311,7 +375,13 @@
         await fetch("/todos", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, description, completed: false, tags }),
+          body: JSON.stringify({
+            title,
+            description,
+            completed: false,
+            tags,
+            priority,
+          }),
         });
 
         addTodoModal.hide();
@@ -329,6 +399,7 @@
           .value.split(",")
           .map((tag) => tag.trim())
           .filter((tag) => tag);
+        const priority = document.getElementById("editTodoPriority").value;
 
         if (!title) {
           alert("제목을 입력하세요!");
@@ -338,7 +409,7 @@
         await fetch(`/todos/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, description, tags }),
+          body: JSON.stringify({ title, description, tags, priority }),
         });
 
         editTodoModal.hide();
@@ -352,7 +423,6 @@
         const canvas = document.getElementById("todoChart");
         const ctx = canvas.getContext("2d");
 
-        // 🔐 안전하게 파괴
         if (
           window.todoChart &&
           typeof window.todoChart.destroy === "function"
@@ -373,9 +443,17 @@
           },
           options: {
             responsive: true,
+            maintainAspectRatio: true,
             plugins: {
               legend: {
                 position: "bottom",
+              },
+              title: {
+                display: true,
+                text: "완료/미완료 비율",
+                font: {
+                  size: 16,
+                },
               },
             },
           },
@@ -384,7 +462,6 @@
 
       function updateTagChart(todos) {
         const tagCounts = {};
-
         todos.forEach((todo) => {
           (todo.tags || []).forEach((tag) => {
             tagCounts[tag] = (tagCounts[tag] || 0) + 1;
@@ -394,7 +471,8 @@
         const labels = Object.keys(tagCounts);
         const data = Object.values(tagCounts);
 
-        const ctx = document.getElementById("tagChart").getContext("2d");
+        const canvas = document.getElementById("tagChart");
+        const ctx = canvas.getContext("2d");
 
         if (window.tagChart && typeof window.tagChart.destroy === "function") {
           window.tagChart.destroy();
@@ -414,9 +492,16 @@
           },
           options: {
             responsive: true,
-            aspectRatio: 1.2,
+            maintainAspectRatio: true,
             plugins: {
               legend: { display: false },
+              title: {
+                display: true,
+                text: "태그별 할 일 수",
+                font: {
+                  size: 16,
+                },
+              },
             },
             scales: {
               y: {
@@ -428,6 +513,19 @@
         });
       }
 
+      function getPriorityColor(priority) {
+        switch (priority) {
+          case "높음":
+            return "#dc3545"; // 빨간색
+          case "중간":
+            return "#ffc107"; // 노란색
+          case "낮음":
+            return "#198754"; // 초록색
+          default:
+            return "#6c757d"; // 회색
+        }
+      }
+
       function renderTodos(todos) {
         const list = document.getElementById("todoList");
         list.innerHTML = "";
@@ -436,6 +534,9 @@
           const li = document.createElement("li");
           li.className =
             "list-group-item d-flex justify-content-between align-items-center";
+
+          // 우선순위에 따른 왼쪽 테두리 색상 추가
+          li.style.borderLeft = `4px solid ${getPriorityColor(todo.priority)}`;
 
           const checkbox = document.createElement("input");
           checkbox.type = "checkbox";
@@ -447,11 +548,16 @@
           todoText.className = "flex-grow-1";
           todoText.innerHTML = `
             <strong>${todo.title}</strong>: ${todo.description}
-            <div>${todo.tags
-              .map(
-                (tag) => `<span class="badge bg-secondary me-1">${tag}</span>`
-              )
-              .join("")}</div>
+            <div>
+              <span class="badge" style="background-color: ${getPriorityColor(
+                todo.priority
+              )}">${todo.priority}</span>
+              ${todo.tags
+                .map(
+                  (tag) => `<span class="badge bg-secondary me-1">${tag}</span>`
+                )
+                .join("")}
+            </div>
           `;
 
           if (todo.completed) {
@@ -470,7 +576,8 @@
               todo.id,
               todo.title,
               todo.description,
-              todo.tags || []
+              todo.tags || [],
+              todo.priority
             );
 
           const deleteButton = document.createElement("button");
@@ -490,6 +597,65 @@
 
         updateChart(todos);
         updateTagChart(todos);
+        updatePriorityChart(todos);
+      }
+
+      function updatePriorityChart(todos) {
+        const priorityCounts = {
+          높음: 0,
+          중간: 0,
+          낮음: 0,
+        };
+
+        todos.forEach((todo) => {
+          priorityCounts[todo.priority]++;
+        });
+
+        const canvas = document.getElementById("priorityChart");
+        const ctx = canvas.getContext("2d");
+
+        if (
+          window.priorityChart &&
+          typeof window.priorityChart.destroy === "function"
+        ) {
+          window.priorityChart.destroy();
+        }
+
+        window.priorityChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: Object.keys(priorityCounts),
+            datasets: [
+              {
+                label: "우선순위별 할 일 수",
+                data: Object.values(priorityCounts),
+                backgroundColor: Object.keys(priorityCounts).map((priority) =>
+                  getPriorityColor(priority)
+                ),
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { display: false },
+              title: {
+                display: true,
+                text: "우선순위별 할 일 수",
+                font: {
+                  size: 16,
+                },
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 },
+              },
+            },
+          },
+        });
       }
 
       async function fetchTodos() {

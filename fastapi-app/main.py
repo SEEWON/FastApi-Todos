@@ -42,12 +42,14 @@ class TodoItem(BaseModel):
     description: str
     completed: bool = False
     tags: list[str] = []
+    priority: str = "중간"  # 높음, 중간, 낮음 중 하나
 
 class TodoUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     completed: Optional[bool] = None
     tags: Optional[list[str]] = None
+    priority: Optional[str] = None
 
 
 # 기본 페이지 제공 (프론트엔드 렌더링)
@@ -84,6 +86,8 @@ def update_todo(todo_id: int, updated_todo: TodoUpdate):
                 todo["completed"] = updated_todo.completed
             if updated_todo.tags is not None:  # 👈 이 부분 추가
                 todo["tags"] = updated_todo.tags
+            if updated_todo.priority is not None:
+                todo["priority"] = updated_todo.priority
             save_data(todos)
             return todo
     raise HTTPException(status_code=404, detail="Todo not found")
