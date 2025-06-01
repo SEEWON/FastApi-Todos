@@ -15,6 +15,7 @@ from os import getenv
 from fastapi import Request
 from prometheus_fastapi_instrumentator import Instrumentator
 from logging_loki import LokiQueueHandler
+from datetime import datetime
 
 app = FastAPI()
 
@@ -69,8 +70,13 @@ def load_data():
         return json.load(file)
 
 def save_data(data):
+    def datetime_handler(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
     with open(DATA_FILE, "w", encoding="utf-8") as file:
-        json.dump(data, file, indent=4, ensure_ascii=False)
+        json.dump(data, file, indent=4, ensure_ascii=False, default=datetime_handler)
 
 # Todo 모델
 class TodoItem(BaseModel):
@@ -79,6 +85,7 @@ class TodoItem(BaseModel):
     completed: bool = False
     tags: list[str] = []
     priority: str = "중간"  # 높음, 중간, 낮음 중 하나
+    due_date: Optional[datetime] = None
 
 class TodoUpdate(BaseModel):
     title: Optional[str] = None
@@ -86,6 +93,7 @@ class TodoUpdate(BaseModel):
     completed: Optional[bool] = None
     tags: Optional[list[str]] = None
     priority: Optional[str] = None
+    due_date: Optional[datetime] = None
 
 
 # 기본 페이지 제공 (프론트엔드 렌더링)
@@ -124,6 +132,8 @@ def update_todo(todo_id: int, updated_todo: TodoUpdate):
                 todo["tags"] = updated_todo.tags
             if updated_todo.priority is not None:
                 todo["priority"] = updated_todo.priority
+            if updated_todo.due_date is not None:
+                todo["due_date"] = updated_todo.due_date
             save_data(todos)
             return todo
     raise HTTPException(status_code=404, detail="Todo not found")

@@ -9,7 +9,8 @@
             "컴퓨터공학과",
             "19학번"
         ],
-        "priority": "낮음"
+        "priority": "중간",
+        "due_date": "2025-06-26T05:10:00+00:00"
     },
     {
         "id": 2,
@@ -21,7 +22,8 @@
             "과제",
             "오픈소스"
         ],
-        "priority": "높음"
+        "priority": "높음",
+        "due_date": null
     },
     {
         "id": 3,
@@ -33,66 +35,32 @@
             "세미나",
             "AI"
         ],
-        "priority": "낮음"
+        "priority": "중간",
+        "due_date": null
     },
     {
         "id": 4,
-        "title": "Jenkins 튜토리얼 보기",
-        "description": "오픈소스 수업 참고 자료 복습",
+        "title": "졸업 프로젝트 기획서 작성",
+        "description": "졸업 프로젝트 기획서 작성 및 제출",
         "completed": false,
         "tags": [
-            "Jenkins",
-            "오픈소스",
-            "수업"
+            "학교",
+            "졸업",
+            "프로젝트"
         ],
-        "priority": "중간"
+        "priority": "높음",
+        "due_date": null
     },
     {
         "id": 5,
-        "title": "과제 마감 확인",
-        "description": "컴퓨터공학과 모든 과제 마감일 정리하기",
-        "completed": false,
-        "tags": [
-            "과제",
-            "마감",
-            "컴퓨터공학과"
-        ],
-        "priority": "낮음"
-    },
-    {
-        "id": 6,
-        "title": "유시원 생일 파티",
-        "description": "19학번 친구들과 모임",
+        "title": "제안서 작성",
+        "description": "제안서 작성 및 제출",
         "completed": true,
         "tags": [
-            "유시원",
-            "19학번",
-            "모임"
+            "제안서",
+            "서류"
         ],
-        "priority": "높음"
-    },
-    {
-        "id": 7,
-        "title": "AI 오픈소스 프로젝트 회의",
-        "description": "AI 관련 오픈소스 팀 미팅 예정",
-        "completed": false,
-        "tags": [
-            "AI",
-            "회의",
-            "오픈소스"
-        ],
-        "priority": "중간"
-    },
-    {
-        "id": 8,
-        "title": "Grafana 적용",
-        "description": "Prometheus 연결, Grafana로 Dashboard 보기",
-        "completed": false,
-        "tags": [
-            "Prometheus",
-            "Grafana",
-            "Node Exporter"
-        ],
-        "priority": "중간"
+        "priority": "낮음",
+        "due_date": null
     }
 ]

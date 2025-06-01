@@ -114,6 +114,37 @@
         right: 20px;
         z-index: 1000;
       }
+
+      .list-group-item {
+        position: relative;
+      }
+
+      .due-date {
+        font-size: 0.9em;
+        color: #6c757d;
+      }
+
+      .due-date.overdue {
+        color: #dc3545;
+        font-weight: bold;
+      }
+
+      .due-date.upcoming {
+        color: #ffc107;
+        font-weight: bold;
+      }
+
+      body.dark-mode .due-date {
+        color: #adb5bd;
+      }
+
+      body.dark-mode .due-date.overdue {
+        color: #ff6b6b;
+      }
+
+      body.dark-mode .due-date.upcoming {
+        color: #ffd43b;
+      }
     </style>
   </head>
 
@@ -218,6 +249,14 @@
                   <option value="낮음">낮음</option>
                 </select>
               </div>
+              <div class="mb-3">
+                <label for="modalTodoDueDate" class="form-label">마감일</label>
+                <input
+                  type="datetime-local"
+                  class="form-control"
+                  id="modalTodoDueDate"
+                />
+              </div>
             </form>
           </div>
           <div class="modal-footer">
@@ -288,6 +327,14 @@
                   <option value="낮음">낮음</option>
                 </select>
               </div>
+              <div class="mb-3">
+                <label for="editTodoDueDate" class="form-label">마감일</label>
+                <input
+                  type="datetime-local"
+                  class="form-control"
+                  id="editTodoDueDate"
+                />
+              </div>
             </form>
           </div>
           <div class="modal-footer">
@@ -342,15 +389,19 @@
         document.getElementById("modalTodoDescription").value = "";
         document.getElementById("modalTodoTags").value = "";
         document.getElementById("modalTodoPriority").value = "중간";
+        document.getElementById("modalTodoDueDate").value = "";
         addTodoModal.show();
       }
 
-      function openEditModal(id, title, description, tags, priority) {
+      function openEditModal(id, title, description, tags, priority, dueDate) {
         document.getElementById("editTodoId").value = id;
         document.getElementById("editTodoTitle").value = title;
         document.getElementById("editTodoDescription").value = description;
         document.getElementById("editTodoTags").value = tags.join(", ");
         document.getElementById("editTodoPriority").value = priority;
+        document.getElementById("editTodoDueDate").value = dueDate
+          ? new Date(dueDate).toISOString().slice(0, 16)
+          : "";
         editTodoModal.show();
       }
 
@@ -366,6 +417,7 @@
           .map((tag) => tag.trim())
           .filter((tag) => tag);
         const priority = document.getElementById("modalTodoPriority").value;
+        const dueDate = document.getElementById("modalTodoDueDate").value;
 
         if (!title) {
           alert("제목을 입력하세요!");
@@ -381,6 +433,7 @@
             completed: false,
             tags,
             priority,
+            due_date: dueDate ? new Date(dueDate).toISOString() : null,
           }),
         });
 
@@ -400,6 +453,7 @@
           .map((tag) => tag.trim())
           .filter((tag) => tag);
         const priority = document.getElementById("editTodoPriority").value;
+        const dueDate = document.getElementById("editTodoDueDate").value;
 
         if (!title) {
           alert("제목을 입력하세요!");
@@ -409,7 +463,13 @@
         await fetch(`/todos/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, description, tags, priority }),
+          body: JSON.stringify({
+            title,
+            description,
+            tags,
+            priority,
+            due_date: dueDate ? new Date(dueDate).toISOString() : null,
+          }),
         });
 
         editTodoModal.hide();
@@ -526,6 +586,22 @@
         }
       }
 
+      function formatDueDate(dueDate) {
+        if (!dueDate) return "";
+        const date = new Date(dueDate);
+        const now = new Date();
+        const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+
+        let className = "due-date";
+        if (diffDays < 0) {
+          className += " overdue";
+        } else if (diffDays <= 3) {
+          className += " upcoming";
+        }
+
+        return `<span class="${className}">마감일: ${date.toLocaleString()}</span>`;
+      }
+
       function renderTodos(todos) {
         const list = document.getElementById("todoList");
         list.innerHTML = "";
@@ -557,6 +633,7 @@
                   (tag) => `<span class="badge bg-secondary me-1">${tag}</span>`
                 )
                 .join("")}
+              ${formatDueDate(todo.due_date)}
             </div>
           `;
 
@@ -577,7 +654,8 @@
               todo.title,
               todo.description,
               todo.tags || [],
-              todo.priority
+              todo.priority,
+              todo.due_date
             );
 
           const deleteButton = document.createElement("button");
