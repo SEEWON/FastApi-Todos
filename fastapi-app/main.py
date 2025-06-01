@@ -16,25 +16,31 @@ from fastapi import Request
 from prometheus_fastapi_instrumentator import Instrumentator
 from logging_loki import LokiQueueHandler
 from datetime import datetime
+from logging.handlers import QueueListener
 
 app = FastAPI()
 
 # Prometheus 메트릭스 엔드포인트 (/metrics)
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
-loki_logs_handler = LokiQueueHandler(
-    Queue(-1),
+# Loki 핸들러 + QueueListener 설정
+log_queue = Queue(-1)
+loki_handler = LokiQueueHandler(
+    log_queue,
     url=getenv("LOKI_ENDPOINT"),
     tags={"application": "fastapi"},
     version="1",
 )
 
-# Custom access logger (ignore Uvicorn's default logging)
+# 🟡 수신기 반드시 실행해야 로그가 Loki로 전송됨!
+queue_listener = QueueListener(log_queue, loki_handler)
+queue_listener.start()
+
+# Custom access logger 설정
 custom_logger = logging.getLogger("custom.access")
 custom_logger.setLevel(logging.INFO)
-
-# Add Loki handler (assuming `loki_logs_handler` is correctly configured)
-custom_logger.addHandler(loki_logs_handler)
+custom_logger.addHandler(logging.StreamHandler())  # 터미널 출력
+custom_logger.addHandler(loki_handler)
 
 async def log_requests(request: Request, call_next):
     start_time = time.time()
