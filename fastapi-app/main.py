@@ -22,8 +22,6 @@ app = FastAPI()
 # Prometheus 메트릭스 엔드포인트 (/metrics)
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
-app.middleware("http")(log_requests)
-
 loki_logs_handler = LokiQueueHandler(
     Queue(-1),
     url=getenv("LOKI_ENDPOINT"),
@@ -53,6 +51,7 @@ async def log_requests(request: Request, call_next):
 
     return response
 
+app.middleware("http")(log_requests)
 
 # 프로젝트 경로 설정
 BASE_DIR = Path(__file__).resolve().parent
